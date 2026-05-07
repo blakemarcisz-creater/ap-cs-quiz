@@ -99,7 +99,18 @@
   .ai-loading-text { font-size: 13px; color: var(--muted); margin-left: 4px; }
   .ai-text { font-size: 14px; color: var(--muted); line-height: 1.75; white-space: pre-wrap; }
   .ai-error { font-size: 13px; color: var(--dim); }
-  .ai-skip { font-size: 12px; color: var(--dim); margin-top: 6px; }
+
+  /* CHAT */
+  .chat-messages { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; max-height: 260px; overflow-y: auto; }
+  .chat-bubble { max-width: 85%; padding: 9px 13px; border-radius: 18px; font-size: 13px; line-height: 1.5; word-break: break-word; }
+  .chat-bubble.user { align-self: flex-end; background: var(--accent); color: #0a0a0a; border-bottom-right-radius: 4px; }
+  .chat-bubble.ai { align-self: flex-start; background: var(--input); color: var(--text); border-bottom-left-radius: 4px; }
+  .chat-bubble.ai.loading { color: var(--dim); font-style: italic; }
+  .chat-input-row { display: flex; gap: 8px; margin-top: 10px; }
+  .chat-input { flex: 1; padding: 10px 14px; font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--input); border: 0.5px solid var(--border); border-radius: 99px; color: var(--text); outline: none; }
+  .chat-input:focus { border-color: var(--accent-border); }
+  .chat-input::placeholder { color: var(--dim); }
+  .chat-send { width: 38px; height: 38px; border-radius: 50%; background: var(--accent); border: none; color: #0a0a0a; font-size: 16px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 </style>
 </head>
 <body>
@@ -150,6 +161,11 @@
     </div>
     <div class="ai-text" id="ai-q-text" style="display:none; font-size:13px;"></div>
     <div class="ai-error" id="ai-q-error" style="display:none; font-size:12px;"></div>
+    <div class="chat-messages" id="chat-messages" style="display:none"></div>
+    <div class="chat-input-row" id="chat-input-row" style="display:none">
+      <input class="chat-input" id="chat-input" type="text" placeholder="ask anything..." onkeydown="if(event.key==='Enter')sendChat()" />
+      <button class="chat-send" onclick="sendChat()">↑</button>
+    </div>
   </div>
   <button class="next-btn" id="next-btn" onclick="nextQuestion()">Next →</button>
 </div>
@@ -256,6 +272,8 @@ let results = [];
 const groqKey = true;
 let userName = localStorage.getItem('quiz_user_name') || '';
 let aiController = null;
+let chatHistory = [];
+let chatLocked = false;
 
 window.addEventListener('DOMContentLoaded', () => {
   if (userName) document.getElementById('name-input').value = userName;
@@ -320,6 +338,12 @@ function renderQuestion() {
   document.getElementById('ai-q-card').style.display = 'none';
   document.getElementById('ai-q-text').style.display = 'none';
   document.getElementById('ai-q-error').style.display = 'none';
+  document.getElementById('chat-messages').style.display = 'none';
+  document.getElementById('chat-messages').innerHTML = '';
+  document.getElementById('chat-input-row').style.display = 'none';
+  document.getElementById('chat-input').value = '';
+  chatHistory = [];
+  chatLocked = false;
   answered = false;
 
   const choicesEl = document.getElementById('q-choices');
@@ -418,38 +442,76 @@ async function fetchQuestionAnalysis(q, selectedIdx, correct) {
   aiController = new AbortController();
 
   const resultWord = correct ? 'CORRECT' : 'WRONG';
-  const prompt = `${userName || 'The student'} is studying for AP Computer Science Principles.
-
-Q: "${q.q}"
-They chose: "${q.choices[selectedIdx]}" — ${resultWord}
-Correct answer: "${q.choices[q.answer]}"
-
-In one casual sentence, tell ${name} why the correct answer is right. Sound like a friend, not a teacher.`;
+  const systemMsg = { role: 'system', content: `You are a high school student helping your friend study. Use casual slang, be real, talk like you're texting. Keep replies short. Examples of tone: "yeah basically TCP makes sure nothing gets lost lol" or "bro binary search needs the list sorted first, that's literally the whole point"` };
+  const firstUserMsg = { role: 'user', content: `Q: "${q.q}" — they chose "${q.choices[selectedIdx]}" which was ${resultWord}. Correct answer: "${q.choices[q.answer]}". In one casual sentence tell ${name} why the correct answer is right.` };
+  chatHistory = [systemMsg, firstUserMsg];
 
   try {
     const res = await fetch('/api/groq', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: aiController.signal,
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 60,
-        messages: [
-          { role: 'system', content: 'You are a high school student helping your friend study. Use casual slang, be real, talk like you\'re texting. One sentence only. Examples of tone: "yeah basically TCP makes sure nothing gets lost lol" or "bro binary search needs the list sorted first, that\'s literally the whole point"' },
-          { role: 'user', content: prompt }
-        ]
-      })
+      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', max_tokens: 80, messages: chatHistory })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || data.error || `HTTP ${res.status}`);
+    const aiReply = data.choices?.[0]?.message?.content || '';
+    chatHistory.push({ role: 'assistant', content: aiReply });
     loading.style.display = 'none';
-    textEl.style.display = 'block';
-    textEl.textContent = data.choices?.[0]?.message?.content || '';
+    textEl.style.display = 'none';
+    const messagesEl = document.getElementById('chat-messages');
+    messagesEl.style.display = 'flex';
+    addChatBubble(aiReply, 'ai');
+    document.getElementById('chat-input-row').style.display = 'flex';
   } catch (err) {
     if (err.name === 'AbortError') return;
     loading.style.display = 'none';
     errorEl.style.display = 'block';
     errorEl.textContent = 'Error: ' + err.message;
+  }
+}
+
+function addChatBubble(text, who) {
+  const el = document.createElement('div');
+  el.className = `chat-bubble ${who}`;
+  el.textContent = text;
+  const messagesEl = document.getElementById('chat-messages');
+  messagesEl.appendChild(el);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+async function sendChat() {
+  if (chatLocked) return;
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addChatBubble(text, 'user');
+  chatHistory.push({ role: 'user', content: text });
+  chatLocked = true;
+
+  const loadingBubble = document.createElement('div');
+  loadingBubble.className = 'chat-bubble ai loading';
+  loadingBubble.textContent = '...';
+  const messagesEl = document.getElementById('chat-messages');
+  messagesEl.appendChild(loadingBubble);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  try {
+    const res = await fetch('/api/groq', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', max_tokens: 100, messages: chatHistory })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || '';
+    chatHistory.push({ role: 'assistant', content: reply });
+    loadingBubble.remove();
+    addChatBubble(reply, 'ai');
+  } catch (err) {
+    loadingBubble.textContent = 'couldn\'t send, try again';
+  } finally {
+    chatLocked = false;
   }
 }
 
