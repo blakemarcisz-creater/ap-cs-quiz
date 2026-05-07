@@ -424,7 +424,7 @@ Q: "${q.q}"
 They chose: "${q.choices[selectedIdx]}" — ${resultWord}
 Correct answer: "${q.choices[q.answer]}"
 
-In 2 sentences max: explain the concept being tested and why the correct answer is right. If wrong, clarify the mistake. Address them as ${name}. Be direct and encouraging.`;
+In 1 simple sentence: say if they got it right or wrong and why the correct answer is right. Use simple words, no jargon. Address them as ${name}.`;
 
   try {
     const res = await fetch('/api/groq', {
@@ -433,9 +433,9 @@ In 2 sentences max: explain the concept being tested and why the correct answer 
       signal: aiController.signal,
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        max_tokens: 100,
+        max_tokens: 60,
         messages: [
-          { role: 'system', content: 'You are a sharp AP exam tutor. Give brief, personalized feedback. No greetings or sign-offs.' },
+          { role: 'system', content: 'You are a friendly tutor for high school students. Keep answers very short and simple. No greetings or sign-offs.' },
           { role: 'user', content: prompt }
         ]
       })
@@ -465,12 +465,12 @@ Missed questions:
 
 ${wrongList}
 
-Give ${name} a focused study breakdown with 3 sections:
-• Weak Topics — 2-3 specific concept areas they struggled with
-• Key Mistake Pattern — 1-2 sentences on what their errors have in common
-• Study Plan — 3 concrete steps to improve before the AP exam
+Give ${name} a simple study summary with 3 bullet points:
+• What topics to review
+• The main mistake they kept making
+• One easy thing to do before the AP exam
 
-Address them by name. Be direct, specific, no fluff. Plain text only, no markdown.`;
+Keep it short, simple, and easy to understand. Address them by name.`;
 
   try {
     const res = await fetch('/api/groq', {
@@ -478,9 +478,9 @@ Address them by name. Be direct, specific, no fluff. Plain text only, no markdow
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        max_tokens: 300,
+        max_tokens: 150,
         messages: [
-          { role: 'system', content: 'You are a sharp AP exam tutor. Give concise, actionable feedback. No greetings or sign-offs.' },
+          { role: 'system', content: 'You are a friendly tutor for high school students. Keep answers short and simple. No greetings or sign-offs.' },
           { role: 'user', content: prompt }
         ]
       })
