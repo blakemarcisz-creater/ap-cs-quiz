@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AP Computer Science Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0a; --card: #111; --input: #1a1a1a;
+    --border: rgba(255,255,255,0.08);
+    --text: #f0f0f0; --muted: #888; --dim: #555;
+    --accent: #00e5a0; --accent-dim: rgba(0,229,160,0.12); --accent-border: rgba(0,229,160,0.3);
+    --correct: #00e5a0; --correct-dim: rgba(0,229,160,0.15);
+    --wrong: #ef4444; --wrong-dim: rgba(239,68,68,0.15);
+    --radius: 12px; --radius-sm: 8px;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.6; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+  /* SCREENS */
+  .screen { display: none; max-width: 600px; margin: 0 auto; padding: 40px 20px 60px; }
+  .screen.active { display: block; }
+
+  /* HOME */
+  .hero { text-align: center; margin-bottom: 40px; }
+  .hero-title { font-size: 36px; font-weight: 700; color: var(--accent); letter-spacing: -0.04em; margin-bottom: 8px; }
+  .hero-sub { font-size: 15px; color: var(--muted); margin-bottom: 4px; }
+  .hero-count { font-size: 13px; color: var(--dim); }
+  .card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .card-label { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); margin-bottom: 14px; }
+  .toggle-row { display: flex; gap: 10px; }
+  .toggle-btn { flex: 1; padding: 12px; font-size: 14px; font-family: 'DM Sans', sans-serif; font-weight: 400; border-radius: var(--radius-sm); border: 0.5px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+  .toggle-btn.active { border: 1px solid var(--accent-border); background: var(--accent-dim); color: var(--accent); font-weight: 500; }
+  .start-btn { width: 100%; padding: 15px; font-size: 16px; font-weight: 600; font-family: 'DM Sans', sans-serif; border-radius: var(--radius); background: var(--accent); color: #0a0a0a; border: none; cursor: pointer; letter-spacing: -0.02em; margin-top: 8px; }
+
+  /* QUIZ */
+  .progress-bar-wrap { height: 4px; background: var(--border); border-radius: 99px; margin-bottom: 24px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.3s ease; }
+  .quiz-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 13px; color: var(--dim); }
+  .quiz-score { font-family: 'DM Mono', monospace; color: var(--accent); font-weight: 500; }
+  .question-text { font-size: 17px; font-weight: 500; color: var(--text); line-height: 1.5; margin-bottom: 24px; letter-spacing: -0.01em; }
+  .choices { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .choice-btn {
+    display: flex; align-items: flex-start; gap: 12; padding: 14px 16px;
+    font-size: 14px; font-family: 'DM Sans', sans-serif; font-weight: 400;
+    text-align: left; border-radius: var(--radius-sm);
+    border: 0.5px solid var(--border); background: var(--card);
+    color: var(--muted); cursor: pointer; transition: all 0.15s; line-height: 1.5;
+  }
+  .choice-btn:hover:not(:disabled) { border-color: var(--accent-border); color: var(--text); background: var(--accent-dim); }
+  .choice-btn .letter { font-family: 'DM Mono', monospace; font-weight: 500; color: var(--dim); margin-right: 12px; flex-shrink: 0; }
+  .choice-btn.correct { border-color: var(--correct); background: var(--correct-dim); color: var(--correct); }
+  .choice-btn.correct .letter { color: var(--correct); }
+  .choice-btn.wrong { border-color: var(--wrong); background: var(--wrong-dim); color: var(--wrong); }
+  .choice-btn.wrong .letter { color: var(--wrong); }
+  .choice-btn:disabled { cursor: default; }
+  .feedback-box { padding: 14px 16px; border-radius: var(--radius-sm); font-size: 14px; margin-bottom: 20px; display: none; }
+  .feedback-box.correct { background: var(--correct-dim); border: 0.5px solid var(--correct); color: var(--correct); }
+  .feedback-box.wrong { background: var(--wrong-dim); border: 0.5px solid var(--wrong); color: var(--wrong); }
+  .next-btn { width: 100%; padding: 13px; font-size: 15px; font-weight: 500; font-family: 'DM Sans', sans-serif; border-radius: var(--radius); background: var(--accent); color: #0a0a0a; border: none; cursor: pointer; display: none; }
+
+  /* RESULTS */
+  .result-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 32px 24px; text-align: center; margin-bottom: 16px; }
+  .result-score { font-size: 72px; font-weight: 700; font-family: 'DM Mono', monospace; letter-spacing: -0.04em; }
+  .result-label { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .result-tier { font-size: 18px; font-weight: 500; margin-top: 6px; }
+  .result-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+  .stat-val { font-size: 28px; font-weight: 500; font-family: 'DM Mono', monospace; }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .retake-btn { width: 100%; padding: 14px; font-size: 15px; font-weight: 500; font-family: 'DM Sans', sans-serif; border-radius: var(--radius); background: var(--accent); color: #0a0a0a; border: none; cursor: pointer; margin-bottom: 10px; }
+  .review-btn { width: 100%; padding: 13px; font-size: 14px; font-family: 'DM Sans', sans-serif; border-radius: var(--radius); background: transparent; border: 0.5px solid var(--border); color: var(--muted); cursor: pointer; }
+
+  /* REVIEW */
+  .review-item { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 12px; }
+  .review-item.correct-item { border-color: var(--correct); }
+  .review-item.wrong-item { border-color: var(--wrong); }
+  .review-q { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 10px; line-height: 1.5; }
+  .review-answer { font-size: 13px; margin-bottom: 4px; }
+  .review-correct { color: var(--correct); }
+  .review-wrong { color: var(--wrong); }
+  .back-btn { width: 100%; padding: 13px; font-size: 14px; font-family: 'DM Sans', sans-serif; border-radius: var(--radius); background: transparent; border: 0.5px solid var(--border); color: var(--muted); cursor: pointer; margin-bottom: 16px; }
+  .section-title { font-size: 13px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); margin-bottom: 16px; }
+
+  /* NAME INPUT */
+  .key-input { width: 100%; padding: 10px 12px; font-size: 14px; font-family: 'DM Sans', monospace; background: var(--input); border: 0.5px solid var(--border); border-radius: var(--radius-sm); color: var(--text); outline: none; }
+  .key-input:focus { border-color: var(--accent-border); }
+  .key-input::placeholder { color: var(--dim); }
+
+  /* AI ANALYSIS CARD */
+  .ai-card { background: var(--accent-dim); border: 0.5px solid var(--accent-border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; display: none; }
+  .ai-card-label { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .ai-loading { display: flex; gap: 5px; align-items: center; }
+  .ai-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1s infinite; }
+  .ai-dot:nth-child(2) { animation-delay: 0.2s; }
+  .ai-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
+  .ai-loading-text { font-size: 13px; color: var(--muted); margin-left: 4px; }
+  .ai-text { font-size: 14px; color: var(--muted); line-height: 1.75; white-space: pre-wrap; }
+  .ai-error { font-size: 13px; color: var(--dim); }
+  .ai-skip { font-size: 12px; color: var(--dim); margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div class="screen active" id="screen-home">
+  <div class="hero">
+    <div class="hero-title">AP CS Quiz</div>
+    <div class="hero-sub">AP Computer Science Principles</div>
+    <div class="hero-count">50 practice questions</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Question order</div>
+    <div class="toggle-row">
+      <button class="toggle-btn active" id="btn-order" onclick="toggleOrder()">🔀 Shuffled</button>
+      <button class="toggle-btn" id="btn-order2" onclick="toggleOrder2()">📋 In order</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-label">Mode</div>
+    <div class="toggle-row">
+      <button class="toggle-btn active" id="btn-mode1" onclick="setMode('practice')">📖 Practice</button>
+      <button class="toggle-btn" id="btn-mode2" onclick="setMode('test')">⏱ Test</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-label">Your name</div>
+    <input class="key-input" id="name-input" type="text" placeholder="Enter your name..." oninput="saveName()" style="width:100%" />
+  </div>
+  <button class="start-btn" onclick="startQuiz()">Start Quiz →</button>
+</div>
+
+<!-- QUIZ -->
+<div class="screen" id="screen-quiz">
+  <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill"></div></div>
+  <div class="quiz-meta">
+    <span id="q-counter">Question 1 of 50</span>
+    <span class="quiz-score" id="q-score">0 correct</span>
+  </div>
+  <div class="question-text" id="q-text"></div>
+  <div class="choices" id="q-choices"></div>
+  <div class="feedback-box" id="feedback"></div>
+  <div class="ai-card" id="ai-q-card" style="display:none; margin-bottom:16px;">
+    <div class="ai-card-label"><span>⚡</span> <span id="ai-q-label">Coach</span></div>
+    <div class="ai-loading" id="ai-q-loading">
+      <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
+      <span class="ai-loading-text">Thinking...</span>
+    </div>
+    <div class="ai-text" id="ai-q-text" style="display:none; font-size:13px;"></div>
+    <div class="ai-error" id="ai-q-error" style="display:none; font-size:12px;"></div>
+  </div>
+  <button class="next-btn" id="next-btn" onclick="nextQuestion()">Next →</button>
+</div>
+
+<!-- RESULTS -->
+<div class="screen" id="screen-results">
+  <div class="result-card">
+    <div class="result-score" id="r-score"></div>
+    <div class="result-label">out of 50</div>
+    <div class="result-tier" id="r-tier"></div>
+  </div>
+  <div class="result-stats">
+    <div class="stat-card">
+      <div class="stat-val" id="r-pct" style="color:var(--accent)"></div>
+      <div class="stat-label">Score</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="r-wrong" style="color:#ef4444"></div>
+      <div class="stat-label">Missed</div>
+    </div>
+  </div>
+  <div class="ai-card" id="ai-card">
+    <div class="ai-card-label"><span>⚡</span> <span id="ai-summary-label">Study Coach</span></div>
+    <div class="ai-loading" id="ai-loading">
+      <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
+      <span class="ai-loading-text">Analyzing your answers...</span>
+    </div>
+    <div class="ai-text" id="ai-text" style="display:none"></div>
+    <div class="ai-error" id="ai-error" style="display:none"></div>
+  </div>
+  <button class="retake-btn" onclick="startQuiz()">Retake Quiz</button>
+  <button class="review-btn" onclick="showReview()">Review Answers</button>
+</div>
+
+<!-- REVIEW -->
+<div class="screen" id="screen-review">
+  <button class="back-btn" onclick="goTo('screen-results')">← Back to results</button>
+  <div class="section-title">All Questions</div>
+  <div id="review-list"></div>
+</div>
+
+<script>
+const ALL_QUESTIONS = [
+  { q: "What is an overflow error?", choices: ["When a program writes beyond memory limits","When a program tries to store more data in a fixed-size location than it can handle","When a program accesses the stack beyond its limits","When a program fits more data into a type than it can hold"], answer: 1 },
+  { q: "What helps verify the original author of code is who they claim to be?", choices: ["Non-repudiation","Integrity","Authentication","Encryption"], answer: 2 },
+  { q: "Code that flows line by line, one after another is called...", choices: ["Debugging","Sequencing","Iteration","Selection"], answer: 1 },
+  { q: "What does Open Access mean?", choices: ["Publications only for subscribers","Publications only for those with academic affiliation","Publications only for digital library subscribers","Publications freely available online at no cost"], answer: 3 },
+  { q: "Linear Search vs Binary Search — which goes one by one vs starts in the middle?", choices: ["Both go one by one","Binary goes one by one; Linear starts in the middle","Linear goes one by one; Binary starts in the middle and eliminates half each time","They are the same algorithm"], answer: 2 },
+  { q: "A standard way to perform an operation is called a...", choices: ["Algorithm","Redundancy","Phishing","Protocol"], answer: 3 },
+  { q: "What is fault tolerance?", choices: ["100% guarantee no data will be lost","Routers communicating across distances with no data loss","When a network is set up so data can still transfer even if a connection fails","Computers communicating through the internet"], answer: 2 },
+  { q: "What is parallel computing?", choices: ["How computers send data across the internet","Processing by one processor step by step","When a computer computes a single problem","Breaking a large problem into smaller parts processed across multiple processors"], answer: 3 },
+  { q: "What data type would the variable 'isOn' be?", choices: ["String","Number","List","Boolean"], answer: 3 },
+  { q: "What is 00110101 in decimal?", choices: ["36","40","53","30"], answer: 2 },
+  { q: "What is 1010111 in decimal?", choices: ["77","94","14","87"], answer: 3 },
+  { q: "What is 58 in binary?", choices: ["100101","111010","111111","001101"], answer: 1 },
+  { q: "What is 86 in binary?", choices: ["1101001","1011010","1010110","1011100"], answer: 2 },
+  { q: "What is 6 in binary?", choices: ["1011","1111","1100","0110"], answer: 3 },
+  { q: "What is the largest value representable by 5 bits?", choices: ["14","31","27","29"], answer: 1 },
+  { q: "How many bits are in a byte?", choices: ["9","6","4","8"], answer: 3 },
+  { q: "Which protocol is used to stream video?", choices: ["TCP","HTTP","DNS","UDP"], answer: 3 },
+  { q: "Which accurately describes TCP?", choices: ["TCP is a connectionless protocol","TCP provides connection-oriented and ordered delivery of data packets","TCP is used for real-time streaming","TCP provides disconnected and random delivery"], answer: 1 },
+  { q: "How is data transferred across the internet to load a webpage?", choices: ["Translated into an IPv6 address","Metadata is created for each piece of data","Split into packets, sent via routers, and reassembled at the destination","Packets use IPv6 metadata without sending anywhere"], answer: 2 },
+  { q: "When are IP addresses assigned?", choices: ["When a device is first made","When a device first connects to the internet","A new address is assigned for each message sent","When a device is bought"], answer: 1 },
+  { q: "What is encryption?", choices: ["Taking scrambled data and unscrambling it","Making up a code with friends","Hiding data","Scrambling data into a code so only authorized parties can read it"], answer: 3 },
+  { q: "What is decryption?", choices: ["Cipher","Caesar Cipher","The process of reversing encryption to get the original data back","Cracking a password"], answer: 2 },
+  { q: "What is a heuristic?", choices: ["A problem with only one solution","A practical approach that finds a good-enough solution when an exact answer is hard to compute","A problem with no solutions","An algorithm that always finds the perfect answer"], answer: 1 },
+  { q: "What is an optimization problem?", choices: ["Finding the right time to bake cookies","Distributing work to others","A problem where you seek the best solution from many possibilities","Buying the cheaper option at the store"], answer: 2 },
+  { q: "What is NOT true of algorithms?", choices: ["They are a step by step procedure","Multiple algorithms can produce the same output with different code","They can have an infinite number of steps","They contain a set of instructions"], answer: 2 },
+  { q: "True or False: Correlation = Causation", choices: ["True","False","Sometimes true","Only true in science"], answer: 1 },
+  { q: "What is the difference between lossy and lossless compression?", choices: ["They are the same","Lossless permanently removes data; lossy does not","Lossy permanently removes data; lossless does not","Lossy is over technology; lossless is in person"], answer: 2 },
+  { q: "Which is most likely analog data?", choices: ["A Google Doc","A text message","A video recording","A sound wave"], answer: 3 },
+  { q: "What is redundancy in computing?", choices: ["A computer that never stops working","Extra components or paths so a system keeps working if parts fail","Using fewer components to manage complexity","Extracting shared features to generalize functionality"], answer: 1 },
+  { q: "Why is redundancy important for networks?", choices: ["So a network can never stop working","It allows bigger data to transfer faster","So it can be fault-tolerant","It makes packets faster"], answer: 2 },
+  { q: "What is a round-off error?", choices: ["An overflow error","When a value is too large for its data type","When a number loses precision because computers store finite decimal places","Data compression"], answer: 2 },
+  { q: "What is the Digital Divide?", choices: ["The difference between IPv4 and IPv6","The gap between those who have access to technology and those who do not","The split between analog and digital data","The difference between lossy and lossless compression"], answer: 1 },
+  { q: "Which would positively impact the Digital Divide?", choices: ["Larger budgets for elite university STEM programs","Chain franchises participating in online lotteries","The government requiring small businesses to buy new hardware","The district providing computers to all enrolled students"], answer: 3 },
+  { q: "What is crowdsourcing?", choices: ["A large group that conducts research","The process of scanning through data and cleaning it","Collecting information or work from a large group of people via technology","Making opinions based on observations"], answer: 2 },
+  { q: "What is the difference between Open Access and Open Source?", choices: ["They are the same thing","Open Access = freely viewable; Open Source = source code freely available to modify and redistribute","Open Source = freely viewable; Open Access = source code freely available to modify","Both mean source code is freely available"], answer: 1 },
+  { q: "What is Creative Commons?", choices: ["A type of encryption","A government copyright law","Licensing that lets others share or build on your work as long as they credit you","A type of open source software"], answer: 2 },
+  { q: "What is a library in programming?", choices: ["A place to check out books","A huge file full of data","Code only the programmer can access","Reusable code that other programmers can import and use"], answer: 3 },
+  { q: "What is a parameter?", choices: ["An argument passed when calling a function","A variable named in a function definition that accepts input values","A return value from a function","A mod operation"], answer: 1 },
+  { q: "What is phishing?", choices: ["Malware installed on your device","Recording your keystrokes","Using fake emails or websites to trick users into giving up personal info","A rogue access point"], answer: 2 },
+  { q: "What is malware?", choices: ["Software installed without consent that performs malicious actions","A fake email with a suspicious link","Recording keystrokes with a virus","A tool used to distribute viruses"], answer: 0 },
+  { q: "What is keylogging?", choices: ["Logging into a website with keys","An unsuspecting email with a virus link","Recording keystrokes to steal passwords or data","A rogue access point"], answer: 2 },
+  { q: "What is a Boolean data type?", choices: ["A sequence of characters","A whole number","A data type that holds only true or false","A list of values"], answer: 2 },
+  { q: "What is a String data type?", choices: ["A data type representing text — a sequence of characters","A whole number","A true or false value","A list of numbers"], answer: 0 },
+  { q: "What is binary search?", choices: ["Checks each item one by one from the start","Only works on unsorted lists","Requires a sorted list and eliminates half the remaining data each step","Always slower than linear search"], answer: 2 },
+  { q: "What is the point of a parameter in a function?", choices: ["To send code through libraries","To use an already existing section of code","To allow code to be reused with different input values","All of the above"], answer: 2 },
+  { q: "True or False: Lossless compression uses more bits than the original", choices: ["True","False","Only for images","Only for audio"], answer: 1 },
+  { q: "What is metadata?", choices: ["The big parts of data","Data that describes how code functions","The packet route only","Data that describes other data"], answer: 3 },
+  { q: "What is an IP address?", choices: ["A protective number that stops hacking","A unique address assigned to a device when it connects to the internet","The physical location of a device","Another name for a phone number"], answer: 1 },
+  { q: "Which would a food recommendation app need to suggest nearby places?", choices: ["Cell phone number","Recent search history","Account details","Location pings"], answer: 3 },
+  { q: "What is true about binary search?", choices: ["The list does not need to be sorted","It checks every element one by one","It requires a sorted list and eliminates half the data each step","It is slower than linear search"], answer: 2 },
+];
+
+const LETTERS = ['A','B','C','D'];
+let questions = [];
+let current = 0;
+let score = 0;
+let answered = false;
+let shuffled = true;
+let mode = 'practice';
+let results = [];
+const groqKey = true;
+let userName = localStorage.getItem('quiz_user_name') || '';
+let aiController = null;
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (userName) document.getElementById('name-input').value = userName;
+});
+
+function saveName() {
+  const val = document.getElementById('name-input').value.trim();
+  userName = val;
+  if (val) localStorage.setItem('quiz_user_name', val);
+  else localStorage.removeItem('quiz_user_name');
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function toggleOrder() {
+  shuffled = true;
+  document.getElementById('btn-order').classList.add('active');
+  document.getElementById('btn-order2').classList.remove('active');
+}
+function toggleOrder2() {
+  shuffled = false;
+  document.getElementById('btn-order').classList.remove('active');
+  document.getElementById('btn-order2').classList.add('active');
+}
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-mode1').classList.toggle('active', m === 'practice');
+  document.getElementById('btn-mode2').classList.toggle('active', m === 'test');
+}
+
+function goTo(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function startQuiz() {
+  questions = shuffled ? shuffle(ALL_QUESTIONS) : [...ALL_QUESTIONS];
+  current = 0; score = 0; answered = false; results = [];
+  goTo('screen-quiz');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  if (aiController) { aiController.abort(); aiController = null; }
+  const q = questions[current];
+  const total = questions.length;
+  document.getElementById('progress-fill').style.width = ((current / total) * 100) + '%';
+  document.getElementById('q-counter').textContent = `Question ${current + 1} of ${total}`;
+  document.getElementById('q-score').textContent = `${score} correct`;
+  document.getElementById('q-text').textContent = q.q;
+  document.getElementById('feedback').style.display = 'none';
+  document.getElementById('feedback').className = 'feedback-box';
+  document.getElementById('next-btn').style.display = 'none';
+  document.getElementById('ai-q-card').style.display = 'none';
+  document.getElementById('ai-q-text').style.display = 'none';
+  document.getElementById('ai-q-error').style.display = 'none';
+  answered = false;
+
+  const choicesEl = document.getElementById('q-choices');
+  choicesEl.innerHTML = '';
+  q.choices.forEach((choice, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerHTML = `<span class="letter">${LETTERS[i]}</span>${choice}`;
+    btn.onclick = () => selectAnswer(i);
+    choicesEl.appendChild(btn);
+  });
+}
+
+function selectAnswer(i) {
+  if (answered) return;
+  answered = true;
+  const q = questions[current];
+  const correct = i === q.answer;
+  const btns = document.querySelectorAll('.choice-btn');
+
+  btns.forEach(b => b.disabled = true);
+  btns[q.answer].classList.add('correct');
+  if (!correct) btns[i].classList.add('wrong');
+
+  if (correct) score++;
+  results.push({ q: q.q, choices: q.choices, answer: q.answer, selected: i, correct });
+
+  if (mode === 'practice') {
+    const fb = document.getElementById('feedback');
+    fb.className = 'feedback-box ' + (correct ? 'correct' : 'wrong');
+    fb.textContent = correct ? '✓ Correct!' : `✗ The correct answer is ${LETTERS[q.answer]}: ${q.choices[q.answer]}`;
+    fb.style.display = 'block';
+  }
+
+  document.getElementById('next-btn').style.display = 'block';
+  document.getElementById('next-btn').textContent = current === questions.length - 1 ? 'See Results →' : 'Next →';
+
+  if (groqKey) {
+    fetchQuestionAnalysis(q, i, correct);
+  }
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= questions.length) return showResults();
+  renderQuestion();
+}
+
+function showResults() {
+  const pct = Math.round((score / questions.length) * 100);
+  const missed = questions.length - score;
+  let tier, color;
+  if (pct >= 90) { tier = '🏆 Excellent — AP ready!'; color = '#00e5a0'; }
+  else if (pct >= 75) { tier = '💪 Strong — almost there'; color = '#84cc16'; }
+  else if (pct >= 60) { tier = '📖 Keep studying'; color = '#f59e0b'; }
+  else { tier = '🔁 More practice needed'; color = '#ef4444'; }
+
+  document.getElementById('r-score').textContent = score;
+  document.getElementById('r-score').style.color = color;
+  document.getElementById('r-tier').textContent = tier;
+  document.getElementById('r-tier').style.color = color;
+  document.getElementById('r-pct').textContent = pct + '%';
+  document.getElementById('r-wrong').textContent = missed;
+
+  const wrong = results.filter(r => !r.correct);
+  const aiCard = document.getElementById('ai-card');
+  if (groqKey && wrong.length > 0) {
+    document.getElementById('ai-summary-label').textContent = userName ? `${userName}'s Study Breakdown` : 'Study Breakdown';
+    aiCard.style.display = 'block';
+    document.getElementById('ai-loading').style.display = 'flex';
+    document.getElementById('ai-text').style.display = 'none';
+    document.getElementById('ai-error').style.display = 'none';
+    fetchAIAnalysis(wrong);
+  } else {
+    aiCard.style.display = 'none';
+  }
+
+  goTo('screen-results');
+}
+
+async function fetchQuestionAnalysis(q, selectedIdx, correct) {
+  const card = document.getElementById('ai-q-card');
+  const loading = document.getElementById('ai-q-loading');
+  const textEl = document.getElementById('ai-q-text');
+  const errorEl = document.getElementById('ai-q-error');
+  const label = document.getElementById('ai-q-label');
+
+  const name = userName || 'you';
+  label.textContent = userName ? `${userName}'s Coach` : 'Coach';
+  card.style.display = 'block';
+  loading.style.display = 'flex';
+  textEl.style.display = 'none';
+  errorEl.style.display = 'none';
+
+  if (aiController) aiController.abort();
+  aiController = new AbortController();
+
+  const resultWord = correct ? 'CORRECT' : 'WRONG';
+  const prompt = `${userName || 'The student'} is studying for AP Computer Science Principles.
+
+Q: "${q.q}"
+They chose: "${q.choices[selectedIdx]}" — ${resultWord}
+Correct answer: "${q.choices[q.answer]}"
+
+In 2 sentences max: explain the concept being tested and why the correct answer is right. If wrong, clarify the mistake. Address them as ${name}. Be direct and encouraging.`;
+
+  try {
+    const res = await fetch('/api/groq', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: aiController.signal,
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 100,
+        messages: [
+          { role: 'system', content: 'You are a sharp AP exam tutor. Give brief, personalized feedback. No greetings or sign-offs.' },
+          { role: 'user', content: prompt }
+        ]
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API error');
+    loading.style.display = 'none';
+    textEl.style.display = 'block';
+    textEl.textContent = data.choices?.[0]?.message?.content || '';
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    loading.style.display = 'none';
+    errorEl.style.display = 'block';
+    errorEl.textContent = 'Could not load feedback. Check your API key.';
+  }
+}
+
+async function fetchAIAnalysis(wrong) {
+  const name = userName || 'The student';
+  const wrongList = wrong.map((r, i) =>
+    `${i + 1}. Q: "${r.q}"\n   Chose: "${r.choices[r.selected]}"\n   Correct: "${r.choices[r.answer]}"`
+  ).join('\n\n');
+
+  const prompt = `${name} just finished an AP Computer Science Principles practice quiz and got ${wrong.length} question(s) wrong out of ${results.length} total.
+
+Missed questions:
+
+${wrongList}
+
+Give ${name} a focused study breakdown with 3 sections:
+• Weak Topics — 2-3 specific concept areas they struggled with
+• Key Mistake Pattern — 1-2 sentences on what their errors have in common
+• Study Plan — 3 concrete steps to improve before the AP exam
+
+Address them by name. Be direct, specific, no fluff. Plain text only, no markdown.`;
+
+  try {
+    const res = await fetch('/api/groq', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 300,
+        messages: [
+          { role: 'system', content: 'You are a sharp AP exam tutor. Give concise, actionable feedback. No greetings or sign-offs.' },
+          { role: 'user', content: prompt }
+        ]
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API error');
+    const text = data.choices?.[0]?.message?.content || '';
+    document.getElementById('ai-loading').style.display = 'none';
+    document.getElementById('ai-text').style.display = 'block';
+    document.getElementById('ai-text').textContent = text;
+  } catch (err) {
+    document.getElementById('ai-loading').style.display = 'none';
+    document.getElementById('ai-error').style.display = 'block';
+    document.getElementById('ai-error').textContent = 'Could not load analysis. Check that your Groq API key is correct.';
+  }
+}
+
+function showReview() {
+  const list = document.getElementById('review-list');
+  list.innerHTML = '';
+  results.forEach((r, i) => {
+    const div = document.createElement('div');
+    div.className = 'review-item ' + (r.correct ? 'correct-item' : 'wrong-item');
+    div.innerHTML = `
+      <div class="review-q">${i + 1}. ${r.q}</div>
+      ${!r.correct ? `<div class="review-answer review-wrong">✗ You chose: ${LETTERS[r.selected]}: ${r.choices[r.selected]}</div>` : ''}
+      <div class="review-answer review-correct">✓ Correct: ${LETTERS[r.answer]}: ${r.choices[r.answer]}</div>
+    `;
+    list.appendChild(div);
+  });
+  goTo('screen-review');
+}
+</script>
+</body>
+</html>
