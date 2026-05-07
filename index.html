@@ -441,7 +441,7 @@ In 2 sentences max: explain the concept being tested and why the correct answer 
       })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'API error');
+    if (!res.ok) throw new Error(data.error?.message || data.error || `HTTP ${res.status}`);
     loading.style.display = 'none';
     textEl.style.display = 'block';
     textEl.textContent = data.choices?.[0]?.message?.content || '';
@@ -449,7 +449,7 @@ In 2 sentences max: explain the concept being tested and why the correct answer 
     if (err.name === 'AbortError') return;
     loading.style.display = 'none';
     errorEl.style.display = 'block';
-    errorEl.textContent = 'Could not load feedback. Check your API key.';
+    errorEl.textContent = 'Error: ' + err.message;
   }
 }
 
@@ -487,7 +487,7 @@ Address them by name. Be direct, specific, no fluff. Plain text only, no markdow
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'API error');
+    if (!res.ok) throw new Error(data.error?.message || data.error || `HTTP ${res.status}`);
     const text = data.choices?.[0]?.message?.content || '';
     document.getElementById('ai-loading').style.display = 'none';
     document.getElementById('ai-text').style.display = 'block';
@@ -495,7 +495,7 @@ Address them by name. Be direct, specific, no fluff. Plain text only, no markdow
   } catch (err) {
     document.getElementById('ai-loading').style.display = 'none';
     document.getElementById('ai-error').style.display = 'block';
-    document.getElementById('ai-error').textContent = 'Could not load analysis. Check that your Groq API key is correct.';
+    document.getElementById('ai-error').textContent = 'Error: ' + err.message;
   }
 }
 
