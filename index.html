@@ -424,7 +424,7 @@ Q: "${q.q}"
 They chose: "${q.choices[selectedIdx]}" — ${resultWord}
 Correct answer: "${q.choices[q.answer]}"
 
-In 1 simple sentence: say if they got it right or wrong and why the correct answer is right. Use simple words, no jargon. Address them as ${name}.`;
+In one casual sentence, tell ${name} why the correct answer is right. Sound like a friend, not a teacher.`;
 
   try {
     const res = await fetch('/api/groq', {
@@ -435,7 +435,7 @@ In 1 simple sentence: say if they got it right or wrong and why the correct answ
         model: 'llama-3.3-70b-versatile',
         max_tokens: 60,
         messages: [
-          { role: 'system', content: 'You are a friendly tutor for high school students. Keep answers very short and simple. No greetings or sign-offs.' },
+          { role: 'system', content: 'You are a chill friend helping someone study. Talk casually like you\'re texting. Super short — one sentence max. No greetings or sign-offs.' },
           { role: 'user', content: prompt }
         ]
       })
@@ -480,7 +480,7 @@ Keep it short, simple, and easy to understand. Address them by name.`;
         model: 'llama-3.3-70b-versatile',
         max_tokens: 150,
         messages: [
-          { role: 'system', content: 'You are a friendly tutor for high school students. Keep answers short and simple. No greetings or sign-offs.' },
+          { role: 'system', content: 'You are a chill friend helping someone study for the AP exam. Talk casually like you\'re texting. Keep it short. No greetings or sign-offs.' },
           { role: 'user', content: prompt }
         ]
       })
